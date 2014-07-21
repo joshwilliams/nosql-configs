@@ -1,0 +1,33 @@
+#!/bin/bash
+if [ -f /etc/node_id ]; then
+	NODEID=`cat /etc/node_id`
+	TESTNAME=`cat /etc/node_testname`
+        TESTDATE=`cat /etc/node_testdate`
+	LOCALIP=`curl -s http://169.254.169.254/2011-05-01/meta-data/local-ipv4`
+
+	NODEKEYSPACE=`cat /etc/node_keyspace`
+
+	if [ -f /etc/node_master ]; then
+		MASTERIP=`cat /etc/node_master`
+	fi
+
+	if [ "$NODEID" == "1" ]; then
+		TEMPLATE=cassandra.master
+	else
+		TEMPLATE=cassandra.slave
+	fi
+
+	sed /home/ubuntu/cassandra/$TEMPLATE \
+		-e"s/__TESTNAME__/$TESTNAME/" \
+		-e"s/__KEYSPACE__/$NODEKEYSPACE/" \
+		-e"s/__MASTERIP__/$MASTERIP/" \
+		-e"s/__LOCALIP__/$LOCALIP/" \
+		>/home/ubuntu/cassandra/current/conf/cassandra.yaml
+fi
+
+if [ -f /home/ubuntu/cassandra/current/conf/cassandra.yaml ]; then
+	mkdir -p /mnt/cassandra /var/log/cassandra
+	chown ubuntu: /mnt/cassandra /var/log/cassandra
+	ln -s /mnt/cassandra /var/lib/cassandra
+	su - ubuntu -c 'cassandra/current/bin/cassandra >/var/log/cassandra/cassandra.log 2>/var/log/cassandra/cassandra.log'
+fi
